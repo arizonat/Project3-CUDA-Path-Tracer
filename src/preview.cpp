@@ -1,5 +1,6 @@
 #include "main.h"
 #include "preview.h"
+#include <time.h>
 
 GLuint positionLocation = 0;
 GLuint texcoordsLocation = 1;

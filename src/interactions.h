@@ -1,6 +1,8 @@
 #pragma once
 
 #include "intersections.h"
+#define TWO_PI 6.28318530718
+#define SQRT_OF_ONE_THIRD 0.57735026919
 
 // CHECKITOUT
 /**
