@@ -252,28 +252,6 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     // * Finally, handle all of the paths that still haven't terminated.
     //   (Easy way is to make them black or background-colored.)
 
-	int nums = 70;
-	int* a = new int[nums];
-	int* aa;
-	int* bb;
-	int* b = new int[nums];
-
-	for (int i = 0; i < nums; i++){
-		a[i] = 1;
-	}
-
-	cudaMalloc((void**)&bb, nums * sizeof(int));
-	cudaMalloc((void**)&aa, nums * sizeof(int));
-	cudaMemcpy(aa, a, nums * sizeof(int), cudaMemcpyHostToDevice);
-	//kernSharedScan << <1, MAX_THREADS, MAX_THREADS*sizeof(int) >> >(MAX_THREADS, bb, aa);
-	blockwise_scan(nums, bb, aa);
-	cudaDeviceSynchronize();
-	cudaMemcpy(b, bb, nums * sizeof(int), cudaMemcpyDeviceToHost);
-
-	for (int j = 0; j < nums; j++){
-		printf("%d ", b[j]);
-	}
-
 	int numBlocks = (pixelcount-1) / MAX_THREADS + 1;
 
 	initRays<<<numBlocks, MAX_THREADS>>>(pixelcount, iter, cam, dev_rays);
@@ -284,17 +262,11 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	for (int d = 0; d < traceDepth; d++){
 		numBlocks = (numAlive - 1) / MAX_THREADS + 1;
-		//checkCUDAError("precheck");
 		intersect<<<numBlocks, MAX_THREADS>>>(iter, d, traceDepth, numAlive, cam, dev_rays, numObjects, dev_geoms, dev_materials);
-		//checkCUDAError("intersect");
 		updatePixels<<<numBlocks, MAX_THREADS>>>(numAlive, dev_rays, dev_image);
 
-		//numAlive = StreamCompaction::Efficient::shared_compact(numAlive, dev_out_rays, dev_rays, is_dead());
-		numAlive = shared_compact(numAlive, dev_out_rays, dev_rays);
-		cudaMemcpy(dev_rays, dev_out_rays, numAlive*sizeof(Ray), cudaMemcpyDeviceToDevice);
-
-		//last_ray = thrust::remove_if(thrust::device, dev_rays, dev_rays + numAlive, is_dead());
-		//numAlive = last_ray - dev_rays;
+		last_ray = thrust::remove_if(thrust::device, dev_rays, dev_rays + numAlive, is_dead());
+		numAlive = last_ray - dev_rays;
 		if (numAlive == 0){
 			break;
 		}
