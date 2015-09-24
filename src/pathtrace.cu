@@ -71,7 +71,7 @@ __global__ void sendImageToPBO(uchar4* pbo, glm::ivec2 resolution,
 static Scene *hst_scene;
 static glm::vec3 *dev_image;
 static Ray* dev_rays;
-static Ray* dev_out_rays;
+//static Ray* dev_out_rays;
 //static glm::vec3* dev_final_colors;
 static Geom* dev_geoms;
 static Material* dev_materials;
@@ -94,7 +94,7 @@ void pathtraceInit(Scene *scene) {
 
 	const int numObjects = hst_scene->geoms.size();
 	cudaMalloc((void**)&dev_rays, pixelcount*sizeof(Ray));
-	cudaMalloc((void**)&dev_out_rays, pixelcount*sizeof(Ray));
+	//cudaMalloc((void**)&dev_out_rays, pixelcount*sizeof(Ray));
 	cudaMalloc((void**)&dev_geoms, numObjects*sizeof(Geom));
 	cudaMalloc((void**)&dev_materials, numObjects*sizeof(Material));
 
@@ -121,7 +121,7 @@ __global__ void initRays(int n, int iter, Camera cam, Ray* rays){
 		glm::vec3 left = glm::cross(cam.up, cam.view);
 
 		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
-		thrust::uniform_real_distribution<float> u01(-0.1, 0.1);
+		thrust::uniform_real_distribution<float> u01(-0.5, 0.5);
 
 		float res2x = cam.resolution.x / 2.0f;
 		float res2y = cam.resolution.y / 2.0f;
