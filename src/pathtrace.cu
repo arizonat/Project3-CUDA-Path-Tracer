@@ -11,6 +11,7 @@
 #include "scene.h"
 #include "glm/glm.hpp"
 #include "glm/gtx/norm.hpp"
+#include <glm/gtc/matrix_inverse.hpp>
 #include "utilities.h"
 #include "pathtrace.h"
 #include "intersections.h"
@@ -140,7 +141,7 @@ __global__ void initRays(int n, int iter, Camera cam, Ray* rays){
 	}
 }
 
-__global__ void intersect(int iter, int depth, int traceDepth, int n, Camera cam, Ray* rays, int numObjects, const Geom* geoms, const Material* materials){
+__global__ void intersect(int iter, int depth, int traceDepth, int n, Camera cam, Ray* rays, int numObjects, Geom* geoms, const Material* materials){
 	int index = (blockIdx.x * blockDim.x) + threadIdx.x;
 
 	glm::vec3 normal;
@@ -171,6 +172,8 @@ __global__ void intersect(int iter, int depth, int traceDepth, int n, Camera cam
 
 		for (int i = 0; i < numObjects; i++){
 			if (geoms[i].type == SPHERE){
+
+
 				isIntersection = sphereIntersectionTest(geoms[i], ray, intersectionPoint, normal, outside);
 			}
 			else {
@@ -259,6 +262,24 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	int numAlive = pixelcount;
 	Ray* last_ray;
+
+	if (iter < 300 && iter % 5 == 0){
+		Geom* hst_geoms = (Geom*)malloc(numObjects*sizeof(Geom));
+		cudaMemcpy(hst_geoms, dev_geoms, numObjects*sizeof(Geom), cudaMemcpyDeviceToHost);
+		int obj = 0;
+		for (obj = 0; obj < numObjects; obj++){
+			if (hst_geoms[obj].type == SPHERE){
+				break;
+			}
+		}
+		hst_geoms[obj].translation.x = hst_geoms[obj].translation.x + 0.1;
+		hst_geoms[obj].transform = utilityCore::buildTransformationMatrix(
+			hst_geoms[obj].translation, hst_geoms[obj].rotation, hst_geoms[obj].scale);
+		hst_geoms[obj].inverseTransform = glm::inverse(hst_geoms[obj].transform);
+		hst_geoms[obj].invTranspose = glm::inverseTranspose(hst_geoms[obj].transform);
+
+		cudaMemcpy(dev_geoms, hst_geoms, numObjects*sizeof(Geom), cudaMemcpyHostToDevice);
+	}
 
 	for (int d = 0; d < traceDepth; d++){
 		numBlocks = (numAlive - 1) / MAX_THREADS + 1;
